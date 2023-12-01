@@ -8,6 +8,8 @@ import re
 import datetime
 
 def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
+    name = str(input("이름을 입력하세요 ")) # 이름을 입력받아 DB에 있는 사용자이면 그 데이터를 불러와 리턴
+
     gender = int(input("성별을 입력하세요 (남자 1, 여자 2) "))
     if gender == 2:     # 추가사항
         detail = (int(input("임신초기: 1, 임신중기: 2, 임신말기: 3, 수유부: 4, 해당사항 없음: 0을 입력하세요 ")))
@@ -68,6 +70,9 @@ def extract(response):   # ocr 함수를 통해 가져온 json파일에서 text�
 def creat_db():     #데이터베이스 생성 함수
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
+
+    # user 테이블 생성
+
     # DV(1일 영양성분 기준치) 테이블 생성
     cursor.execute('''
         CREATE TABLE DV (
@@ -94,9 +99,10 @@ def creat_db():     #데이터베이스 생성 함수
         55)      
     ''')
 
-    # User 사용자의 영양성분 정보를 모아두는 테이블 생성
+    # User_data 사용자의 영양성분 정보를 모아두는 테이블 생성
     cursor.execute('''
-            CREATE TABLE User (
+            CREATE TABLE User_data (
+            name TEXT
             timestamp DATETIME
             Sodium float, 
             Carbohydrates float,
@@ -212,7 +218,7 @@ def per(nume, deno):    # 퍼센트를 계산해 문자열로 리턴해주는 �
     percent = str(div * 100) + '%'
     return percent
 
-def sort(infer_texts, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein):     # 사용자의 영양정보를 정리해서 데이터베이스에 넣어주는 함수
+def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein):     # 사용자의 영양정보를 정리해서 데이터베이스에 넣어주는 함수
     for index, value in enumerate(infer_texts):
         if value == '나트륨':  # 나트륨이 나온 다음 index에 나트륨 값이 들어있음
             Sodium = extract_number(infer_texts[index+1])
@@ -237,9 +243,9 @@ def sort(infer_texts, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_F
     cursor = conn.cursor()
 
     cursor.execute('''
-        INSERT INTO User (timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein
+        INSERT INTO User_data (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
+    ''', name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
 
     conn.commit()
     conn.close()
@@ -249,7 +255,7 @@ def sort(infer_texts, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_F
 
 if __name__ == '__main__':
     # creat_db()    # 데이터 베이스 생성 (데이터베이스가 없는 경우에만 실행)
-    gender, detail, height, weight, age, month, PA = input_info()    # 사용자 정보를 입력 받음
+    name, gender, detail, height, weight, age, month, PA = input_info()    # 사용자 정보를 입력 받음
     EER = EER_calc(gender, detail, height, weight, age, month, PA)   # 사용자의 에너지필요추정량을 계산
     DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein = DV_calc(EER)   # 사용자 정보를 바탕으로 DV를 재계산해준다
     while True:
@@ -267,7 +273,7 @@ if __name__ == '__main__':
                 response = json.load(json_file)
 
             infer_texts = extract(response)
-            sort(infer_texts, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein)
+            sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein)
 
 
 
