@@ -4,14 +4,28 @@ import time
 import base64
 import json
 import sqlite3
+import re
+import datetime
 
-def input_info(): # 사용자 정보를 입력받아 리턴하는 함수
-    gender = int(input(" 성별을 입력하세요 (남자 1, 여자 2) "))
+def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
+    gender = int(input("성별을 입력하세요 (남자 1, 여자 2) "))
+    if gender == 2:     # 추가사항
+        detail = (int(input("임신초기: 1, 임신중기: 2, 임신말기: 3, 수유부: 4, 해당사항 없음: 0을 입력하세요 ")))
+
+    else:
+        detail = 0
+
     height = float(input("키를 입력하세요 (cm): "))
     weight = float(input("몸무게를 입력하세요 (kg): "))
+
     age = int(input("나이를 입력하세요: "))
-    PA = int(input(""))
-    return gender, height, weight, age, PA
+    if age == 0:    # 영아일 경우 개월 수를 입력 받는다
+        month = int(input("개월 수를 입력해주세요 "))
+    else:
+        month = None
+
+    PA = int(input("비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 "))
+    return gender, detail, height, weight, age, month, PA
 
 def ocr(file_path):     # CLOVA OCR을 이용해 이미지에서 텍스트를 추출하는 함수
     api_url = 'https://2bwclle49c.apigw.ntruss.com/custom/v1/26532/9032c8f9fe48076d9b1fe6ee6c9f0e47170cb4cb33e1df43afac3fa35ad1f3c5/general'
@@ -42,7 +56,7 @@ def ocr(file_path):     # CLOVA OCR을 이용해 이미지에서 텍스트를 �
     response = requests.request("POST", api_url, headers=headers,data=payload)
     return response
 
-def extraction(response):   # ocr 함수를 통해 가져온 json파일에서 text값을 추출하는 함수
+def extract(response):   # ocr 함수를 통해 가져온 json파일에서 text값을 추출하는 함수
     infer_texts = []    # infer_text를 추출하여 저장할 배열
     fields = response['images'][0]['fields']
     for field in fields:        # field는 fields안에 있는 각각의 요소가 된다
@@ -67,7 +81,7 @@ def creat_db():     #데이터베이스 생성 함수
         Protein float)
     ''')
     # 위에서부터 순서대로
-    # 나트륨, 탄수화물, 당류, 지방, 트랜스지방, 포화지방, 콜레스테롤, 단백질
+    # 나트륨, 탄수화물, 당류, 지방, 트랜스지방, 포화지방, 콜레스테롤, 단백질 (트랜스지방은 DV가 정해져있지 않음)
     cursor.execute('''
         INSERT INTO DV VALUES(
         2000,
@@ -83,6 +97,7 @@ def creat_db():     #데이터베이스 생성 함수
     # User 사용자의 영양성분 정보를 모아두는 테이블 생성
     cursor.execute('''
             CREATE TABLE User (
+            timestamp DATETIME
             Sodium float, 
             Carbohydrates float,
             Sugars float,
@@ -96,20 +111,149 @@ def creat_db():     #데이터베이스 생성 함수
     conn.commit()
     conn.close()
 
-def EER(gender, height, weight, age, PA):  #에너지필요추정량 계산 함수
+def EER_calc(gender, detail, height, weight, age, month, PA):  #에너지필요추정량 계산 함수
+    if age <= 2:    # 2세 이하
+        EER = 89 * weight - 100
+        if age == 0:
+            if month>=5:
+                EER+=115.5
+            else:
+                EER+=22
+        else:
+            EER+=20
 
+    elif age <= 19:   # 19세 이하
+        if gender == 1:     # 남자
+            if PA == 1:     # 비활동적
+                PA = 1.0
+            elif PA == 2:   # 저활동적
+                PA = 1.13
+            elif PA == 3:   # 활동적
+                PA = 1.26
+            elif PA == 4:   # 매우 활동적
+                PA = 1.42
+            EER = 88.5 - 61.9 * age + PA * (26.7 * weight + 903 * height)
+        elif gender == 2:   # 여자
+            if PA == 1:     # 비활동적
+                PA = 1.0
+            elif PA == 2:   # 저활동적
+                PA = 1.16
+            elif PA == 3:   # 활동적
+                PA = 1.31
+            elif PA == 4:   # 매우 활동적
+                PA = 1.56
+            EER = 135.3 - 30.8 * age + PA * (10.0 * weight + 934 * height)
 
-def sort(infer_texts):     # 사용자의 영양정보를 정리하는 함수
+        if age <= 8:
+            EER += 20
+        else:
+            EER += 25
 
+    else:   # 20세 이상
+        if gender == 1:
+            if PA == 1:     # 비활동적
+                PA = 1.0
+            elif PA == 2:   # 저활동적
+                PA = 1.11
+            elif PA == 3:   # 활동적
+                PA = 1.25
+            elif PA == 4:   # 매우 활동적
+                PA = 1.48
+            EER = 662 - 9.53 * age + PA * (15.91 * weight + 539.6 * height)
+        elif gender == 2:
+            if PA == 1:     # 비활동적
+                PA = 1.0
+            elif PA == 2:   # 저활동적
+                PA = 1.12
+            elif PA == 3:   # 활동적
+                PA = 1.27
+            elif PA == 4:   # 매우 활동적
+                PA = 1.45
+            EER = 354 - 6.91 * age + PA * (9.36 * weight + 726 * height)
 
+            if detail == 2:     # 임신중기
+                EER += 340
+            elif detail == 3:   # 임신말기
+                EER += 450
+            elif detail == 4:   # 수유부
+                EER += 340
 
+    return EER
+
+def extract_number(input_string):   # 문자열에서 숫자만 추출하는 함수
+    number = re.sub(r'\d','',input_string)
+    return int(number)
+
+def DV_calc(EER):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM DV')
+    result = cursor.fetchall()
+
+    conn.close()
+
+    Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein = result
+    ratio = EER / 2000  # 2000칼로리 기준으로 되어있는 DV(1일 영양성분 기준치)를 사용자의 EER에 맞추기 위해 비율을 구한다
+
+    Sodium *= ratio
+    Carbohydrates *= ratio
+    Sugars *= ratio
+    Fat *= ratio
+    # Trans_Fat *= ratio    # 트랜스지방은 DV가 정해져있지 않아 NULL 값이다
+    Saturated_Fat *= ratio
+    Cholesterol *= ratio
+    Protein *= ratio
+
+    return Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein
+
+def per(nume, deno):    # 퍼센트를 계산해 문자열로 리턴해주는 함수
+    div = nume / deno
+    percent = str(div * 100) + '%'
+    return percent
+
+def sort(infer_texts, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein):     # 사용자의 영양정보를 정리해서 데이터베이스에 넣어주는 함수
+    for index, value in enumerate(infer_texts):
+        if value == '나트륨':  # 나트륨이 나온 다음 index에 나트륨 값이 들어있음
+            Sodium = extract_number(infer_texts[index+1])
+        elif value == '탄수화물':
+            Carbohydrates = extract_number(infer_texts[index+1])
+        elif value == '당류':
+            Sugars = extract_number(infer_texts[index+1])
+        elif value == '지방':
+            Fat = extract_number(infer_texts[index+1])
+        elif value == '트랜스지방':
+            Trans_Fat = extract_number(infer_texts[index+1])
+        elif value == '포화지방':
+            Saturated_Fat = extract_number(infer_texts[index+1])
+        elif value == '콜레스테롤':
+            Cholesterol = extract_number(infer_texts[index+1])
+        elif value == '단백질':
+            Protein = extract_number(infer_texts[index+1])
+
+    timestamp = datetime.now()
+    # 데이터베이스에 저장하는 부분
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT INTO User (timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
+
+    conn.commit()
+    conn.close()
+
+    print('현재시간: ', timestamp, '    나트륨:', Sodium,'탄수화물: ', Carbohydrates, '    당류: ', Sugars, '    지방: ', Fat, '    트랜스지방: ', Trans_Fat,'    포화지방: ',Saturated_Fat,'    콜레스테롤: ',Cholesterol,'    단백질: ',Protein)
+    print('1일 영양성분 기준치에 대한 비율(%)', '    나트륨:', per(Sodium, DV_Sodium),'탄수화물: ', per(Carbohydrates, DV_Carbohydrates),'    당류: ', per(Sugars,DV_Sugars), '    지방: ', per(Fat,DV_Fat),'    포화지방: ',per(Saturated_Fat,DV_Saturated_Fat),'    콜레스테롤: ',per(Cholesterol,DV_Cholesterol),'    단백질: ',per(Protein,DV_Protein))
 
 if __name__ == '__main__':
     # creat_db()    # 데이터 베이스 생성 (데이터베이스가 없는 경우에만 실행)
-    # gender, height, weight, age, PA = input_info()    # 사용자 정보를 입력 받음
-
+    gender, detail, height, weight, age, month, PA = input_info()    # 사용자 정보를 입력 받음
+    EER = EER_calc(gender, detail, height, weight, age, month, PA)   # 사용자의 에너지필요추정량을 계산
+    DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein = DV_calc(EER)   # 사용자 정보를 바탕으로 DV를 재계산해준다
     while True:
-        user_input = input("사진을 업로드하려면 사진의 경로 입력 / 하루동안 먹은 영양성분을 조회하려면 show 입력 / 프로그램을 종료하려면 exit를 입력")
+        user_input = input("사진을 업로드하려면 사진의 경로 입력 / 하루동안 먹은 영양성분을 조회하려면 show 입력 / 다른 날짜의 영양성분을 조회하려면 YYYY-MM-DD 포맷으로 날짜 입력 / 프로그램을 종료하려면 exit를 입력")
         if user_input == 'show':
             print('show')
         elif user_input == 'exit':
@@ -122,8 +266,8 @@ if __name__ == '__main__':
             with open('test.json', 'r', encoding='utf-8') as json_file:     # json 파일을 불러옴
                 response = json.load(json_file)
 
-            infer_texts = extraction(response)
-
+            infer_texts = extract(response)
+            sort(infer_texts, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein)
 
 
 
