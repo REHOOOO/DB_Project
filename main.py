@@ -72,6 +72,10 @@ def creat_db():     #데이터베이스 생성 함수
     cursor = conn.cursor()
 
     # user 테이블 생성
+    cursor.execute('''
+            CREATE TABLE User (
+            )
+        ''')
 
     # DV(1일 영양성분 기준치) 테이블 생성
     cursor.execute('''
@@ -243,7 +247,7 @@ def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_T
     cursor = conn.cursor()
 
     cursor.execute('''
-        INSERT INTO User_data (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein
+        INSERT INTO User_data (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
 
