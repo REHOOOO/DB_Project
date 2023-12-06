@@ -74,6 +74,14 @@ def creat_db():     #데이터베이스 생성 함수
     # user 테이블 생성
     cursor.execute('''
             CREATE TABLE User (
+            name TEXT NOT NULL,
+            gender int NOT NULL,
+            detail int NOT NULL
+            hieght float NOT NULL,
+            weight float NOT NULL,
+            age NOT NULL,
+            PA int NOT NULL
+            PRIMARY KEY (name)
             )
         ''')
 
@@ -116,6 +124,7 @@ def creat_db():     #데이터베이스 생성 함수
             Saturated_Fat float,
             Cholesterol float,
             Protein float)
+            FOREIGN KEY (name) REFERENCES User(name)
         ''')
 
     conn.commit()
@@ -189,6 +198,11 @@ def EER_calc(gender, detail, height, weight, age, month, PA):  #에너지필요�
                 EER += 340
 
     return EER
+
+def input_range(str, min, max):  # 범위 내의 숫자만 입력받을 수 있게 해주는 함수
+    while True:
+        try:
+            
 
 def extract_number(input_string):   # 문자열에서 숫자만 추출하는 함수
     number = re.sub(r'\d','',input_string)
