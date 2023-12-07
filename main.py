@@ -202,7 +202,16 @@ def EER_calc(gender, detail, height, weight, age, month, PA):  #에너지필요�
 def input_range(str, min, max):  # 범위 내의 숫자만 입력받을 수 있게 해주는 함수
     while True:
         try:
-            
+            num = int(input(str))
+            if min <= num <= max:   # 입력값이 min 이상 max 이하인지 확인
+                break
+            else:
+                print("유효한 숫자가 아닙니다. 다시 입력해주세요")
+                print(str)
+        except ValueError:
+            print("유효한 숫자가 아닙니다. 다시 입력해주세요")
+            print(str)
+    return num
 
 def extract_number(input_string):   # 문자열에서 숫자만 추출하는 함수
     number = re.sub(r'\d','',input_string)
