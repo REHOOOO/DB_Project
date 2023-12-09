@@ -9,25 +9,45 @@ import datetime
 
 def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
     name = str(input("이름을 입력하세요 ")) # 이름을 입력받아 DB에 있는 사용자이면 그 데이터를 불러와 리턴
-
-    gender = int(input("성별을 입력하세요 (남자 1, 여자 2) "))
-    if gender == 2:     # 추가사항
-        detail = (int(input("임신초기: 1, 임신중기: 2, 임신말기: 3, 수유부: 4, 해당사항 없음: 0을 입력하세요 ")))
-
+    if check_user(name):
+        return check_user
     else:
-        detail = 0
+        gender = int(input("성별을 입력하세요 (남자 1, 여자 2) "))
+        if gender == 2:  # 추가사항
+            detail = (int(input("임신초기: 1, 임신중기: 2, 임신말기: 3, 수유부: 4, 해당사항 없음: 0을 입력하세요 ")))
 
-    height = float(input("키를 입력하세요 (cm): "))
-    weight = float(input("몸무게를 입력하세요 (kg): "))
+        else:
+            detail = 0
 
-    age = int(input("나이를 입력하세요: "))
-    if age == 0:    # 영아일 경우 개월 수를 입력 받는다
-        month = int(input("개월 수를 입력해주세요 "))
-    else:
-        month = None
+        height = float(input("키를 입력하세요 (cm): "))
+        weight = float(input("몸무게를 입력하세요 (kg): "))
 
-    PA = int(input("비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 "))
-    return gender, detail, height, weight, age, month, PA
+        age = int(input("나이를 입력하세요: "))
+        if age == 0:  # 영아일 경우 개월 수를 입력 받는다
+            month = int(input("개월 수를 입력해주세요 "))
+        else:
+            month = None
+
+        PA = int(input("비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 "))
+        return name, gender, detail, height, weight, age, month, PA
+
+def check_user(name):       # 사용자가 데이터베이스에 있는지 확인하는 함수
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+            SELECT *
+            FROM User
+            WHERE name = ?
+    '''
+    ,(name,))
+
+    result = cursor.fetchone()
+
+    conn.close()
+
+    return result
+
 
 def ocr(file_path):     # CLOVA OCR을 이용해 이미지에서 텍스트를 추출하는 함수
     api_url = 'https://2bwclle49c.apigw.ntruss.com/custom/v1/26532/9032c8f9fe48076d9b1fe6ee6c9f0e47170cb4cb33e1df43afac3fa35ad1f3c5/general'
@@ -76,11 +96,11 @@ def creat_db():     #데이터베이스 생성 함수
             CREATE TABLE User (
             name TEXT NOT NULL,
             gender int NOT NULL,
-            detail int NOT NULL
-            hieght float NOT NULL,
+            detail int NOT NULL,
+            height float NOT NULL,
             weight float NOT NULL,
             age NOT NULL,
-            PA int NOT NULL
+            PA int NOT NULL,
             PRIMARY KEY (name)
             )
         ''')
@@ -123,8 +143,8 @@ def creat_db():     #데이터베이스 생성 함수
             Trans_Fat float,
             Saturated_Fat float,
             Cholesterol float,
-            Protein float)
-            FOREIGN KEY (name) REFERENCES User(name)
+            Protein float,
+            FOREIGN KEY (name) REFERENCES User(name))
         ''')
 
     conn.commit()
