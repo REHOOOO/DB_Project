@@ -10,7 +10,7 @@ from datetime import datetime
 def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
     name = str(input("이름을 입력하세요 ")) # 이름을 입력받아 DB에 있는 사용자이면 그 데이터를 불러와 리턴
     if check_user(name):
-        name, gender, detail, height, weight, age, month, PA = check_user
+        name, gender, detail, height, weight, age, month, PA = check_user(name)
     else:
         gender = int(input("성별을 입력하세요 (남자 1, 여자 2) "))
         if gender == 2:  # 추가사항
@@ -42,7 +42,7 @@ def check_user(name):       # 사용자가 데이터베이스에 있는지 확�
             FROM User
             WHERE name = ?
     '''
-    ,(name))
+    ,(name,))
 
     result = cursor.fetchone()
 
@@ -149,8 +149,8 @@ def creat_db():     #데이터베이스 생성 함수
     # User_data 사용자의 영양성분 정보를 모아두는 테이블 생성
     cursor.execute('''
             CREATE TABLE User_data (
-            name TEXT
-            timestamp DATETIME
+            name TEXT,
+            timestamp DATETIME,
             Sodium float, 
             Carbohydrates float,
             Sugars float,
@@ -304,7 +304,7 @@ def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_T
 
     cursor.execute('''
         INSERT INTO User_data (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein))
 
     conn.commit()
