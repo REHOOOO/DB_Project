@@ -207,10 +207,8 @@ def input_range(str, min, max):  # 범위 내의 숫자만 입력받을 수 있�
                 break
             else:
                 print("유효한 숫자가 아닙니다. 다시 입력해주세요")
-                print(str)
         except ValueError:
             print("유효한 숫자가 아닙니다. 다시 입력해주세요")
-            print(str)
     return num
 
 def extract_number(input_string):   # 문자열에서 숫자만 추출하는 함수
