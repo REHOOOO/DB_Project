@@ -5,12 +5,12 @@ import base64
 import json
 import sqlite3
 import re
-import datetime
+from datetime import datetime
 
 def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
     name = str(input("이름을 입력하세요 ")) # 이름을 입력받아 DB에 있는 사용자이면 그 데이터를 불러와 리턴
     if check_user(name):
-        return check_user
+        name, gender, detail, height, weight, age, month, PA = check_user
     else:
         gender = int(input("성별을 입력하세요 (남자 1, 여자 2) "))
         if gender == 2:  # 추가사항
@@ -29,7 +29,9 @@ def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
             month = None
 
         PA = int(input("비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 "))
-        return name, gender, detail, height, weight, age, month, PA
+        insert_user(name, gender, detail, height, weight, age, month, PA)
+
+    return name, gender, detail, height, weight, age, month, PA
 
 def check_user(name):       # 사용자가 데이터베이스에 있는지 확인하는 함수
     conn = sqlite3.connect('database.db')
@@ -40,7 +42,7 @@ def check_user(name):       # 사용자가 데이터베이스에 있는지 확�
             FROM User
             WHERE name = ?
     '''
-    ,(name,))
+    ,(name))
 
     result = cursor.fetchone()
 
@@ -48,6 +50,18 @@ def check_user(name):       # 사용자가 데이터베이스에 있는지 확�
 
     return result
 
+def insert_user(name, gender, detail, height, weight, age, month, PA):   # 입력받은 사용자 정보를 데이터베이스에 저장해준다
+    insert_data = (name, gender, detail, height, weight, age, month, PA)
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+            INSERT INTO User VALUES(?, ?, ?, ?, ?, ?, ?, ?) 
+        ''', insert_data)
+
+    conn.commit()
+    conn.close()
+    return
 
 def ocr(file_path):     # CLOVA OCR을 이용해 이미지에서 텍스트를 추출하는 함수
     api_url = 'https://2bwclle49c.apigw.ntruss.com/custom/v1/26532/9032c8f9fe48076d9b1fe6ee6c9f0e47170cb4cb33e1df43afac3fa35ad1f3c5/general'
@@ -100,6 +114,7 @@ def creat_db():     #데이터베이스 생성 함수
             height float NOT NULL,
             weight float NOT NULL,
             age NOT NULL,
+            month int,
             PA int NOT NULL,
             PRIMARY KEY (name)
             )
@@ -232,7 +247,7 @@ def input_range(str, min, max):  # 범위 내의 숫자만 입력받을 수 있�
     return num
 
 def extract_number(input_string):   # 문자열에서 숫자만 추출하는 함수
-    number = re.sub(r'\d','',input_string)
+    number = re.sub(r'[^0-9]','',input_string)
     return int(number)
 
 def DV_calc(EER):
@@ -240,7 +255,7 @@ def DV_calc(EER):
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM DV')
-    result = cursor.fetchall()
+    result = cursor.fetchone()
 
     conn.close()
 
@@ -290,7 +305,7 @@ def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_T
     cursor.execute('''
         INSERT INTO User_data (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
+    ''', (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein))
 
     conn.commit()
     conn.close()
@@ -298,6 +313,7 @@ def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_T
     print('현재시간: ', timestamp, '    나트륨:', Sodium,'탄수화물: ', Carbohydrates, '    당류: ', Sugars, '    지방: ', Fat, '    트랜스지방: ', Trans_Fat,'    포화지방: ',Saturated_Fat,'    콜레스테롤: ',Cholesterol,'    단백질: ',Protein)
     print('1일 영양성분 기준치에 대한 비율(%)', '    나트륨:', per(Sodium, DV_Sodium),'탄수화물: ', per(Carbohydrates, DV_Carbohydrates),'    당류: ', per(Sugars,DV_Sugars), '    지방: ', per(Fat,DV_Fat),'    포화지방: ',per(Saturated_Fat,DV_Saturated_Fat),'    콜레스테롤: ',per(Cholesterol,DV_Cholesterol),'    단백질: ',per(Protein,DV_Protein))
 
+    return
 if __name__ == '__main__':
     # creat_db()    # 데이터 베이스 생성 (데이터베이스가 없는 경우에만 실행)
     name, gender, detail, height, weight, age, month, PA = input_info()    # 사용자 정보를 입력 받음
