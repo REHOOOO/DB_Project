@@ -166,6 +166,7 @@ def creat_db():     #데이터베이스 생성 함수
     conn.close()
 
 def EER_calc(gender, detail, height, weight, age, month, PA):  #에너지필요추정량 계산 함수
+    height = height/100 # cm단위를 m 단위로 변경해준다
     if age <= 2:    # 2세 이하
         EER = 89 * weight - 100
         if age == 0:
@@ -246,9 +247,9 @@ def input_range(str, min, max):  # 범위 내의 숫자만 입력받을 수 있�
             print("유효한 숫자가 아닙니다. 다시 입력해주세요")
     return num
 
-def extract_number(input_string):   # 문자열에서 숫자만 추출하는 함수
-    number = re.sub(r'[^0-9]','',input_string)
-    return int(number)
+def extract_number(input_string):   # 문자열에서 숫자와 소수점만 추출하는 함수
+    number = re.sub(r'[^0-9\.]','',input_string)
+    return float(number)
 
 def DV_calc(EER):
     conn = sqlite3.connect('database.db')
@@ -279,7 +280,7 @@ def per(nume, deno):    # 퍼센트를 계산해 문자열로 리턴해주는 �
     return percent
 
 def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein):     # 사용자의 영양정보를 정리해서 데이터베이스에 넣어주는 함수
-    for index, value in enumerate(infer_texts):
+    for index, value in enumerate(infer_texts): # index와 값을 가져온다
         if value == '나트륨':  # 나트륨이 나온 다음 index에 나트륨 값이 들어있음
             Sodium = extract_number(infer_texts[index+1])
         elif value == '탄수화물':
