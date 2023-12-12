@@ -34,7 +34,7 @@ def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
     return name, gender, detail, height, weight, age, month, PA
 
 
-def check_user(name):       # 사용자가 데이터베이스에 있는지 확인하는 함수
+def check_user(name):       # 사용자가 데이터베이스에 있다면 정보를 리턴
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
@@ -167,8 +167,8 @@ def creat_db():     #데이터베이스 생성 함수
     # User_data 사용자의 영양성분 정보를 모아두는 테이블 생성
     cursor.execute('''
             CREATE TABLE User_data (
-            name TEXT,
-            timestamp DATETIME,
+            name TEXT NOT NULL,
+            timestamp DATETIME NOT NULL,
             Sodium float, 
             Carbohydrates float,
             Sugars float,
@@ -255,6 +255,9 @@ def EER_calc(gender, detail, height, weight, age, month, PA):  #에너지필요�
 
 def extract_number(input_string):   # 문자열에서 숫자와 소수점만 추출하는 함수
     number = re.sub(r'[^0-9\.]','',input_string)
+    if not number: # 만약 숫자가 없다면 number는 0으로 설정
+        number = 0
+
     return float(number)
 
 def DV_calc(EER):
@@ -282,7 +285,8 @@ def DV_calc(EER):
 
 def per(nume, deno):    # 퍼센트를 계산해 문자열로 리턴해주는 함수
     div = nume / deno
-    percent = str(div * 100) + '%'
+    div = round(div*100,4)
+    percent = str(div) + '%'
     return percent
 
 def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein):     # 사용자의 영양정보를 정리해서 데이터베이스에 넣어주는 함수
@@ -317,36 +321,75 @@ def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_T
     conn.commit()
     conn.close()
 
-    print('현재시간: ', timestamp, '    나트륨:', Sodium,'탄수화물: ', Carbohydrates, '    당류: ', Sugars, '    지방: ', Fat, '    트랜스지방: ', Trans_Fat,'    포화지방: ',Saturated_Fat,'    콜레스테롤: ',Cholesterol,'    단백질: ',Protein)
-    print('1일 영양성분 기준치에 대한 비율(%)', '    나트륨:', per(Sodium, DV_Sodium),'탄수화물: ', per(Carbohydrates, DV_Carbohydrates),'    당류: ', per(Sugars,DV_Sugars), '    지방: ', per(Fat,DV_Fat),'    포화지방: ',per(Saturated_Fat,DV_Saturated_Fat),'    콜레스테롤: ',per(Cholesterol,DV_Cholesterol),'    단백질: ',per(Protein,DV_Protein))
+    print('현재시간: ', timestamp, '    나트륨:', Sodium,'    탄수화물: ', Carbohydrates, '    당류: ', Sugars, '    지방: ', Fat, '    트랜스지방: ', Trans_Fat,'    포화지방: ',Saturated_Fat,'    콜레스테롤: ',Cholesterol,'    단백질: ',Protein)
+    print('1일 영양성분 기준치에 대한 비율(%)', '    나트륨:', per(Sodium, DV_Sodium),'    탄수화물: ', per(Carbohydrates, DV_Carbohydrates),'    당류: ', per(Sugars,DV_Sugars), '    지방: ', per(Fat,DV_Fat),'    포화지방: ',per(Saturated_Fat,DV_Saturated_Fat),'    콜레스테롤: ',per(Cholesterol,DV_Cholesterol),'    단백질: ',per(Protein,DV_Protein))
 
     return
+
+def oneday(name, date, EER):   # 입력받은 날짜의 영양정보를 출력
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT *
+        FROM User_data
+        WHERE name = ? AND DATE(timestamp) = ?
+    ''', (name, date))
+
+    result = cursor.fetchall()
+
+    print(name+ ' ' + date)
+    for data in result:     # 그 날짜의 영양정보 출력
+        exname, exdate, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein = data
+        timedata = datetime.strptime(exdate,"%Y-%m-%d %H:%M:%S.%f")
+        extime = timedata.strftime("%H:%M:%S")
+        print(str(extime) + ' 나트륨:', Sodium,'    탄수화물: ', Carbohydrates,'    당류: ', Sugars, '    지방: ', Fat,'    트랜스지방: ', Trans_Fat,'    포화지방: ', Saturated_Fat,'    콜레스테롤: ', Cholesterol,'    단백질: ', Protein)
+
+    cursor.execute('''
+            SELECT SUM(Sodium), SUM(Carbohydrates), SUM(Sugars), SUM(Fat), SUM(Saturated_Fat), SUM(Cholesterol), SUM(Protein)
+            FROM User_data
+            WHERE name = ? AND DATE(timestamp) = ?
+        ''', (name, date))
+
+    result = cursor.fetchone()
+    conn.close()
+
+    DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein = DV_calc(EER)
+    Sodium, Carbohydrates, Sugars, Fat, Saturated_Fat, Cholesterol, Protein = result
+    print('    나트륨:', per(Sodium, DV_Sodium), '    탄수화물: ', per(Carbohydrates, DV_Carbohydrates), '    당류: ', per(Sugars,DV_Sugars), '    지방: ', per(Fat, DV_Fat), '    포화지방: ', per(Saturated_Fat, DV_Saturated_Fat), '    콜레스테롤: ', per(Cholesterol,DV_Cholesterol), '    단백질: ', per(Protein, DV_Protein))
+
+def input_date(): # 날짜를 입력받는 함수
+    while True:
+        date = input("조회할 날짜를 입력하세요 (YYYY-MM-DD): ")
+        try:
+            timedata = datetime.strptime(date,"%Y-%m-%d")
+            change_date = timedata.strftime("%Y-%m-%d")
+            return str(change_date)
+        except ValueError:
+            print("올바른 날짜 형식이 아닙니다. 다시 입력해주세요.")
+
 if __name__ == '__main__':
     # creat_db()    # 데이터 베이스 생성 (데이터베이스가 없는 경우에만 실행)
     name, gender, detail, height, weight, age, month, PA = input_info()    # 사용자 정보를 입력 받음
     EER = EER_calc(gender, detail, height, weight, age, month, PA)   # 사용자의 에너지필요추정량을 계산
     DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein = DV_calc(EER)   # 사용자 정보를 바탕으로 DV를 재계산해준다
     while True:
-        user_input = input("사진을 업로드하려면 사진의 경로 입력 / 하루동안 먹은 영양성분을 조회하려면 show 입력 / 다른 날짜의 영양성분을 조회하려면 YYYY-MM-DD 포맷으로 날짜 입력 / 프로그램을 종료하려면 exit를 입력")
+        user_input = input("사진을 업로드하려면 사진의 경로 입력 / 하루동안 먹은 영양성분을 조회하려면 show 입력 / 프로그램을 종료하려면 exit를 입력")
         if user_input == 'show':
-            print('show')
+            date = input_date()
+            oneday(name, date, EER)
         elif user_input == 'exit':
             print('프로그램이 종료됩니다')
             break
         else:
-            # response = ocr('pic/IMG_1166.jpg')
-            # with open('test.json', 'w', encoding='utf-8') as json_file:   # json 파일로 저장
-            #     json.dump(response.json(), json_file, ensure_ascii=False, indent=4)
-            with open('test.json', 'r', encoding='utf-8') as json_file:     # json 파일을 불러옴
-                response = json.load(json_file)
-
-            infer_texts = extract(response)
-            sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein)
-
-
-
-
-
-
-
-
+            try:
+                response = ocr(user_input)
+                # with open('test.json', 'w', encoding='utf-8') as json_file:   # json 파일로 저장
+                #     json.dump(response.json(), json_file, ensure_ascii=False, indent=4)
+                # with open('test.json', 'r', encoding='utf-8') as json_file:     # json 파일을 불러옴
+                #     response = json.load(json_file)
+                json_string = json.dumps(response.json(), ensure_ascii=False, indent=4)
+                infer_texts = extract(json.loads(json_string))
+                sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_Trans_Fat, DV_Saturated_Fat, DV_Cholesterol, DV_Protein)
+            except FileNotFoundError:
+                print("파일이 존재하지 않습니다. 다시 입력해주세요")
