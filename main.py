@@ -12,26 +12,27 @@ def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
     if check_user(name):
         name, gender, detail, height, weight, age, month, PA = check_user(name)
     else:
-        gender = int(input("성별을 입력하세요 (남자 1, 여자 2) "))
+        gender = input_range("성별을 입력하세요 (남자 1, 여자 2) ", 'int', 1, 2)
         if gender == 2:  # 추가사항
-            detail = (int(input("임신초기: 1, 임신중기: 2, 임신말기: 3, 수유부: 4, 해당사항 없음: 0을 입력하세요 ")))
+            detail = input_range("임신초기: 1, 임신중기: 2, 임신말기: 3, 수유부: 4, 해당사항 없음: 0을 입력하세요 ", 'int', 0, 4)
 
         else:
             detail = 0
 
-        height = float(input("키를 입력하세요 (cm): "))
-        weight = float(input("몸무게를 입력하세요 (kg): "))
+        height = input_range("키를 입력하세요 (cm): ", 'float', 0, 300)
+        weight = input_range("몸무게를 입력하세요 (kg): ", 'float', 0, 700)
 
-        age = int(input("나이를 입력하세요: "))
+        age = input_range("나이를 입력하세요: ", 'int', 0, 200)
         if age == 0:  # 영아일 경우 개월 수를 입력 받는다
-            month = int(input("개월 수를 입력해주세요 "))
+            month = input_range("개월 수를 입력해주세요 ", 'int', 0, 11)
         else:
             month = None
 
-        PA = int(input("비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 "))
+        PA = input_range("비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 ", 'int', 1, 4)
         insert_user(name, gender, detail, height, weight, age, month, PA)
 
     return name, gender, detail, height, weight, age, month, PA
+
 
 def check_user(name):       # 사용자가 데이터베이스에 있는지 확인하는 함수
     conn = sqlite3.connect('database.db')
@@ -62,6 +63,23 @@ def insert_user(name, gender, detail, height, weight, age, month, PA):   # 입�
     conn.commit()
     conn.close()
     return
+
+def input_range(str, type, min, max):  # 범위 내의 숫자만 입력받을 수 있게 해주는 함수
+    while True:
+        input_num = input(str)  # num을 입력받는다
+        try:
+            if type == 'int':
+                num = int(input_num)
+            elif type == 'float':
+                num = float(input_num)
+
+            if min <= num <= max:  # 입력값이 min 이상 max 이하인지 확인
+                return num
+            else:
+                print("숫자가 범위 내에 있지 않습니다. 다시 입력해주세요")
+        except ValueError:
+            print("숫자가 아닙니다. 다시 입력해주세요")
+
 
 def ocr(file_path):     # CLOVA OCR을 이용해 이미지에서 텍스트를 추출하는 함수
     api_url = 'https://2bwclle49c.apigw.ntruss.com/custom/v1/26532/9032c8f9fe48076d9b1fe6ee6c9f0e47170cb4cb33e1df43afac3fa35ad1f3c5/general'
@@ -234,18 +252,6 @@ def EER_calc(gender, detail, height, weight, age, month, PA):  #에너지필요�
                 EER += 340
 
     return EER
-
-def input_range(str, min, max):  # 범위 내의 숫자만 입력받을 수 있게 해주는 함수
-    while True:
-        try:
-            num = int(input(str))
-            if min <= num <= max:   # 입력값이 min 이상 max 이하인지 확인
-                break
-            else:
-                print("유효한 숫자가 아닙니다. 다시 입력해주세요")
-        except ValueError:
-            print("유효한 숫자가 아닙니다. 다시 입력해주세요")
-    return num
 
 def extract_number(input_string):   # 문자열에서 숫자와 소수점만 추출하는 함수
     number = re.sub(r'[^0-9\.]','',input_string)
