@@ -28,7 +28,7 @@ def input_info():   # 사용자 정보를 입력받아 리턴하는 함수
         else:
             month = None
 
-        PA = input_range("비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 ", 'int', 1, 4)
+        PA = input_range("신체활동량을 입력하세요: 비활동적: 1, 저활동적: 2, 활동적: 3, 매우 활동적: 4를 입력하세요 ", 'int', 1, 4)
         insert_user(name, gender, detail, height, weight, age, month, PA)
 
     return name, gender, detail, height, weight, age, month, PA
@@ -41,7 +41,7 @@ def check_user(name):       # 사용자가 데이터베이스에 있다면 정�
     cursor.execute('''
             SELECT *
             FROM User
-            WHERE name = ?
+            WHERE name = ?;
     '''
     ,(name,))
 
@@ -57,7 +57,7 @@ def insert_user(name, gender, detail, height, weight, age, month, PA):   # 입�
     cursor = conn.cursor()
 
     cursor.execute('''
-            INSERT INTO User VALUES(?, ?, ?, ?, ?, ?, ?, ?) 
+            INSERT INTO User VALUES(?, ?, ?, ?, ?, ?, ?, ?); 
         ''', insert_data)
 
     conn.commit()
@@ -135,7 +135,7 @@ def creat_db():     #데이터베이스 생성 함수
             month int,
             PA int NOT NULL,
             PRIMARY KEY (name)
-            )
+            );
         ''')
 
     # DV(1일 영양성분 기준치) 테이블 생성
@@ -148,7 +148,7 @@ def creat_db():     #데이터베이스 생성 함수
         Trans_Fat float,
         Saturated_Fat float,
         Cholesterol float,
-        Protein float)
+        Protein float);
     ''')
     # 위에서부터 순서대로
     # 나트륨, 탄수화물, 당류, 지방, 트랜스지방, 포화지방, 콜레스테롤, 단백질 (트랜스지방은 DV가 정해져있지 않음)
@@ -161,7 +161,7 @@ def creat_db():     #데이터베이스 생성 함수
         NULL,
         15,
         300,
-        55)      
+        55);   
     ''')
 
     # User_data 사용자의 영양성분 정보를 모아두는 테이블 생성
@@ -177,7 +177,8 @@ def creat_db():     #데이터베이스 생성 함수
             Saturated_Fat float,
             Cholesterol float,
             Protein float,
-            FOREIGN KEY (name) REFERENCES User(name))
+            FOREIGN KEY (name) REFERENCES User(name)
+            ON DELETE CASCADE ON UPDATE CASCADE);
         ''')
 
     conn.commit()
@@ -264,7 +265,7 @@ def DV_calc(EER):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM DV')
+    cursor.execute('SELECT * FROM DV;')
     result = cursor.fetchone()
 
     conn.close()
@@ -315,7 +316,7 @@ def sort(infer_texts, name, DV_Sodium, DV_Carbohydrates, DV_Sugars, DV_Fat, DV_T
 
     cursor.execute('''
         INSERT INTO User_data (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     ''', (name, timestamp, Sodium, Carbohydrates, Sugars, Fat, Trans_Fat, Saturated_Fat, Cholesterol, Protein))
 
     conn.commit()
@@ -333,7 +334,7 @@ def oneday(name, date, EER):   # 입력받은 날짜의 영양정보를 출력
     cursor.execute('''
         SELECT *
         FROM User_data
-        WHERE name = ? AND DATE(timestamp) = ?
+        WHERE name = ? AND DATE(timestamp) = ?;
     ''', (name, date))
 
     result = cursor.fetchall()
@@ -348,7 +349,7 @@ def oneday(name, date, EER):   # 입력받은 날짜의 영양정보를 출력
     cursor.execute('''
             SELECT SUM(Sodium), SUM(Carbohydrates), SUM(Sugars), SUM(Fat), SUM(Saturated_Fat), SUM(Cholesterol), SUM(Protein)
             FROM User_data
-            WHERE name = ? AND DATE(timestamp) = ?
+            WHERE name = ? AND DATE(timestamp) = ?;
         ''', (name, date))
 
     result = cursor.fetchone()
